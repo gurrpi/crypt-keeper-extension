@@ -16,25 +16,26 @@ import classNames from "classnames";
 import { browser } from "webextension-polyfill-ts";
 import "./home.scss";
 import { ellipsify, sliceAddress } from "@src/util/account";
-import CreateIdentityModal from "@src/ui/components/CreateIdentityModal";
+import { CreateIdentityModal } from "@src/ui/components/CreateIdentityModal";
 import ConnectionModal from "@src/ui/components/ConnectionModal";
 import Menuable from "@src/ui/components/Menuable";
 import { useAppDispatch } from "@src/ui/ducks/hooks";
-import { useMetaMaskConnect, useMetaMaskWalletInfo } from "@src/ui/services/useMetaMask";
+import { useMetaMaskConnect } from "@src/ui/services/useMetaMask";
+import log from "loglevel";
 
 export default function Home(): ReactElement {
   const dispatch = useAppDispatch();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [fixedTabs, fixTabs] = useState(false);
 
+  useMetaMaskConnect();
+
   useEffect(() => {
     (async () => {
       try {
-        //await useMetaMaskConnect();
-        //await useMetaMaskWalletInfo();
         dispatch(fetchIdentities());
       } catch (error) {
-        throw new Error(`Error in connecting to MetaMask`);
+        throw new Error("Error in connecting to MetaMask");
       }
     })();
   }, []);
@@ -191,12 +192,14 @@ const IdentityList = function (): ReactElement {
   const selectIdentity = useCallback(async (identityCommitment: string) => {
     dispatch(setActiveIdentity(identityCommitment));
   }, []);
+
   const changeIdentityNameButton = useCallback(async (identityCommitment: string, name: string | undefined) => {
     if (name) {
       await dispatch(setIdentityName(identityCommitment, name));
       updateSetRenameMap(identityCommitment, false);
     }
   }, []);
+
   const deleteIdentityButton = useCallback(async (identityCommitment: string) => {
     await dispatch(deleteIdentity(identityCommitment));
     setDeleteIdentityState(true);
@@ -208,7 +211,7 @@ const IdentityList = function (): ReactElement {
   };
 
   const handleKeypress = (e: any, commitment: string, name: string | undefined) => {
-    console.log("handleKeypress", e.key);
+    log.debug("handleKeypress", e.key);
     if (e.key === "Enter") {
       if (name) {
         changeIdentityNameButton(commitment, name);
@@ -218,14 +221,13 @@ const IdentityList = function (): ReactElement {
   };
 
   useEffect(() => {
-    dispatch(fetchIdentities());
     setDeleteIdentityState(false);
   }, [renameInput, deleteIdentityState, identities]);
 
   return (
     <>
       {showingModal && <CreateIdentityModal onClose={() => setShowModal(false)} />}
-      {identities.map(({ commitment, metadata }, i) => {
+      {identities.map(({ commitment, metadata }) => {
         return (
           <div className="p-4 identity-row" key={commitment}>
             <Icon
@@ -257,7 +259,7 @@ const IdentityList = function (): ReactElement {
                 <div className="flex flex-row items-center text-lg font-semibold">
                   {`${metadata.name}`}
                   <span className="text-xs py-1 px-2 ml-2 rounded-full bg-gray-500 text-gray-800">
-                    {metadata.web2Provider}
+                    {metadata.web2Provider || "random"}
                   </span>
                 </div>
               )}
